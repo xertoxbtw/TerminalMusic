@@ -14,7 +14,6 @@ namespace TerminalMusic
         public static Thread AudioSystem;
         public static byte Flag = 0;
 
-
         public static float Volume = 1f;
         public static bool Playing = false;
         public static TimeSpan PlayingPos = new TimeSpan();
@@ -85,100 +84,103 @@ namespace TerminalMusic
         public static void Draw()
         {
             Stopwatch.Restart();
-            char[,] Buffer = new char[Console.WindowWidth, Console.WindowHeight];
-            SelectedYSize = Console.WindowHeight - 6;
-
-            for (int y = 0; y < Console.WindowHeight; y++)
+            try
             {
-                for (int x = 0; x < Console.WindowWidth; x++)
+                // Create Buffer Array and Fill
+                char[,] Buffer = new char[Console.WindowWidth, Console.WindowHeight];
+                SelectedYSize = Console.WindowHeight - 6;
+
+                for (int y = 0; y < Console.WindowHeight; y++)
                 {
-                    Buffer[x, y] = ' ';
-                }
-            }
-
-
-            // Border
-            for (int y = 0; y < Console.WindowHeight - 1; y++)
-            {
-                Buffer[0, y] = '║';
-                Buffer[Console.WindowWidth - 1, y] = '║';
-            }
-            for (int i = 0; i < Console.WindowWidth; i++)
-            {
-                Buffer[i, 1] = '═';
-            }
-            Buffer[0, 1] = '╔';
-            Buffer[Console.WindowWidth - 1, 1] = '╗';
-
-            for (int i = 0; i < Console.WindowWidth; i++)
-            {
-                Buffer[i, Console.WindowHeight - 1] = '═';
-            }
-
-            Buffer[0, Console.WindowHeight - 1] = '╚';
-            Buffer[Console.WindowWidth - 1, Console.WindowHeight - 1] = '╝';
-
-            for (int i = 0; i < Console.WindowWidth; i++)
-            {
-                Buffer[i, 4] = '═';
-            }
-            Buffer[0, 4] = '╠';
-            Buffer[Console.WindowWidth - 1, 4] = '╣';
-            // Text
-
-            string playnowtext = "Current Song: " + Songs[SongSelection].Name;
-            for (int i = 0; i < playnowtext.Length; i++)
-            {
-                Buffer[i + 1, 2] = playnowtext[i];
-            }
-            // Song Selection
-            if (SelectedYSize > Songs.Count)
-            {
-                SelectedYSize -= (SelectedYSize - Songs.Count);
-                System.Diagnostics.Debug.WriteLine(SelectedYSize);
-            }
-            for (int i = 0; i < SelectedYSize; i++)
-            {
-                string SongBuffer = "";
-                if (i == Selected - Offset)
-                {
-                    if (i + Offset < Songs.Count)
+                    for (int x = 0; x < Console.WindowWidth; x++)
                     {
-                        SongBuffer = "->" + Songs[i + Offset].Name;
+                        Buffer[x, y] = ' ';
                     }
                 }
-                else
+
+                // Border
+                for (int y = 0; y < Console.WindowHeight - 1; y++)
                 {
-                    if (i + Offset < Songs.Count)
+                    Buffer[0, y] = '║';
+                    Buffer[Console.WindowWidth - 1, y] = '║';
+                }
+                for (int i = 0; i < Console.WindowWidth; i++)
+                {
+                    Buffer[i, 1] = '═';
+                }
+                Buffer[0, 1] = '╔';
+                Buffer[Console.WindowWidth - 1, 1] = '╗';
+
+                for (int i = 0; i < Console.WindowWidth; i++)
+                {
+                    Buffer[i, Console.WindowHeight - 1] = '═';
+                }
+
+                Buffer[0, Console.WindowHeight - 1] = '╚';
+                Buffer[Console.WindowWidth - 1, Console.WindowHeight - 1] = '╝';
+
+                for (int i = 0; i < Console.WindowWidth; i++)
+                {
+                    Buffer[i, 4] = '═';
+                }
+                Buffer[0, 4] = '╠';
+                Buffer[Console.WindowWidth - 1, 4] = '╣';
+                // Ui TopBar Text
+
+                string playnowtext = "Current Song: " + Songs[SongSelection].Name;
+                for (int i = 0; i < playnowtext.Length; i++)
+                {
+                    Buffer[i + 1, 2] = playnowtext[i];
+                }
+                // Song Selection
+                /*if (SelectedYSize > Songs.Count)
+                {
+                    SelectedYSize -= (SelectedYSize - Songs.Count);
+                }*/
+                for (int i = 0; i < SelectedYSize; i++)
+                {
+                    string SongBuffer = "";
+                    if (i == Selected - Offset)
                     {
-                        SongBuffer = Songs[i + Offset].Name;
+                        if (i + Offset < Songs.Count)
+                        {
+                            SongBuffer = "->" + Songs[i + Offset].Name;
+                        }
+                    }
+                    else
+                    {
+                        if (i + Offset < Songs.Count)
+                        {
+                            SongBuffer = Songs[i + Offset].Name;
+                        }
+                    }
+                    for (int b = 0; b < SongBuffer.Length; b++)
+                    {
+                        Buffer[b + 1, i + 5] = SongBuffer[b];
                     }
                 }
-                for (int b = 0; b < SongBuffer.Length; b++)
+
+                // Draw To Screen
+                Console.SetCursorPosition(0, 0);
+                string DisplayBuffer = "";
+                for (int i = 0; i < Console.WindowHeight; i++)
                 {
-                    Buffer[b + 1, i + 5] = SongBuffer[b];
-
+                    DisplayBuffer = DisplayBuffer + new string(CustomArray<char>.GetColumn(Buffer, i));
                 }
+                Console.Write(DisplayBuffer);
+                Flag = 0;
+                Console.Title = "TerminalMusic";
             }
-            Console.SetCursorPosition(0, 0);
-            string DisplayBuffer = "";
-            for (int i = 0; i < Console.WindowHeight; i++)
-            {
-                DisplayBuffer = DisplayBuffer + new string(CustomArray<char>.GetColumn(Buffer, i));
-            }
-            Console.Write(DisplayBuffer);
-            Flag = 0;
-            Console.Title = "TerminalMusic";
-
-            /*catch
+            catch
             {
                 Console.Title = "Window is to Small to Draw";
-            }*/
+            }
             Debug.WriteLine("Time: " + Stopwatch.ElapsedMilliseconds);
         }
 
         public static void KeyDown(ConsoleKey key)
         {
+            // Switch Audio Playing
             if (key == ConsoleKey.Spacebar)
             {
                 if (Playing == true)
@@ -190,6 +192,7 @@ namespace TerminalMusic
                     Playing = true;
                 }
             }
+            // Scroll Down
             else if (key == ConsoleKey.DownArrow)
             {
                 if (Selected < Songs.Count)
@@ -202,6 +205,7 @@ namespace TerminalMusic
                         Selected++;
                 Flag = 1;
             }
+            // Scroll Up
             else if (key == ConsoleKey.UpArrow)
             {
                 if (Selected > 0 + Offset)
@@ -214,12 +218,14 @@ namespace TerminalMusic
 
                 Flag = 1;
             }
+            // Select Song
             else if (key == ConsoleKey.Enter)
             {
                 SongSelection = Selected;
                 Playing = true;
                 Flag = 1;
             }
+            // Volume Plus
             else if (key == ConsoleKey.P)
             {
                 if (Volume < 1f)
@@ -227,6 +233,7 @@ namespace TerminalMusic
                     Volume += 0.05f;
                 }
             }
+            // Volume Minus
             else if (key == ConsoleKey.M)
             {
                 if (Volume > 0f)
@@ -235,7 +242,6 @@ namespace TerminalMusic
                 }
             }
         }
-
 
         public static void PlayAudio()
         {
