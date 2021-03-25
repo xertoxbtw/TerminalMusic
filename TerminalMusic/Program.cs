@@ -5,7 +5,6 @@ using System.IO;
 using System.Threading;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
 
 namespace TerminalMusic
 {
