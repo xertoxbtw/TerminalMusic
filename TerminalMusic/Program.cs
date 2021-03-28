@@ -3,8 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
-using System.Diagnostics;
-using System.Linq;
 
 namespace TerminalMusic
 {
@@ -14,15 +12,15 @@ namespace TerminalMusic
         public static Thread AudioSystem;
         public static byte Flag = 0;
 
+        public static string Path = Environment.GetFolderPath(Environment.SpecialFolder.MyMusic);
+
         public static float Volume = 1f;
         public static bool Playing = false;
         public static TimeSpan PlayingPos = new TimeSpan();
         public static TimeSpan PlayingLen = new TimeSpan();
         public static int SongSelection = 0;
         public static List<Entry> Songs = new List<Entry>();
-        public static TimeSpan PartLen = new TimeSpan();
-
-        public static uint RenderPart = 0;
+        public static long PartLen = 0;
 
         public static int WinX = Console.WindowWidth;
         public static int WinY = Console.WindowHeight;
@@ -31,11 +29,10 @@ namespace TerminalMusic
         public static int SelectedYSize;
 
         public static int Offset = 0;
-        public static Stopwatch Stopwatch;
-
+        public static int TopUISize = 8;
+        public static bool NoMusic = true;
         static void Main(string[] args)
         {
-            Stopwatch = new Stopwatch();
             Load();
             AudioSystem = new Thread(PlayAudio);
             AudioSystem.Start();
@@ -43,6 +40,7 @@ namespace TerminalMusic
             Flag = 1;
             while (ExeRunning)
             {
+                //System.Diagnostics.Debug.WriteLine(AudioSystem.ThreadState);
                 if (WinX != Console.WindowWidth || WinY != Console.WindowHeight)
                 {
                     try
@@ -61,34 +59,34 @@ namespace TerminalMusic
                 Console.CursorVisible = false;
                 if (Flag == 1)
                     Draw();
-                if (Console.KeyAvailable & Flag == 0)
+                if (Console.KeyAvailable)
                     KeyDown(Console.ReadKey(true).Key);
             }
         }
         public static void Load()
         {
             Songs.Clear();
-            DirectoryInfo folderpath = new DirectoryInfo(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic));
-            FileInfo[] Files0 = folderpath.GetFiles("*.mp3");
-            foreach (FileInfo file in Files0)
+            DirectoryInfo folderpath = new DirectoryInfo(Path);
+            FileInfo[] Files = folderpath.GetFiles("*.mp3");
+            foreach (FileInfo file in Files)
             {
-                Songs.Add(new Entry(file.Name, file.FullName));
+                Songs.Add(new Entry(file.Name.Replace(file.Extension, ""), file.FullName));
             }
-            FileInfo[] Files1 = folderpath.GetFiles("*.wav");
-            foreach (FileInfo file in Files1)
+            Files = folderpath.GetFiles("*.wav");
+            foreach (FileInfo file in Files)
             {
-                Songs.Add(new Entry(file.Name, file.FullName));
+                Songs.Add(new Entry(file.Name.Replace(file.Extension, ""), file.FullName));
             }
+            Files = null;
         }
 
         public static void Draw()
         {
-            Stopwatch.Restart();
             try
             {
                 // Create Buffer Array and Fill
                 char[,] Buffer = new char[Console.WindowWidth, Console.WindowHeight];
-                SelectedYSize = Console.WindowHeight - 6;
+                SelectedYSize = Console.WindowHeight - TopUISize - 1;
 
                 for (int y = 0; y < Console.WindowHeight; y++)
                 {
@@ -121,22 +119,41 @@ namespace TerminalMusic
 
                 for (int i = 0; i < Console.WindowWidth; i++)
                 {
-                    Buffer[i, 4] = '═';
+                    Buffer[i, TopUISize - 1] = '═';
                 }
-                Buffer[0, 4] = '╠';
-                Buffer[Console.WindowWidth - 1, 4] = '╣';
+                Buffer[0, TopUISize - 1] = '╠';
+                Buffer[Console.WindowWidth - 1, TopUISize - 1] = '╣';
                 // Ui TopBar Text
 
-                string playnowtext = "Current Song: " + Songs[SongSelection].Name;
-                for (int i = 0; i < playnowtext.Length; i++)
+                string topTextUI = "Current Song: " + Songs[SongSelection].Name;
+                for (int i = 0; i < topTextUI.Length; i++)
                 {
-                    Buffer[i + 1, 2] = playnowtext[i];
+                    Buffer[i + 1, 2] = topTextUI[i];
                 }
+
+
+                topTextUI = "Volume: " + Math.Round(Volume * 100) + "%";
+                for (int i = 0; i < topTextUI.Length; i++)
+                {
+                    Buffer[i + 1, 3] = topTextUI[i];
+                }
+
+                /*Playing Status
+                if (NoMusic == false)
+                {
+                    topTextUI = PlayingPos+"/"+PlayingLen;
+                    for (int i = 0; i < topTextUI.Length; i++)
+                    {
+                        Buffer[i + 1, 4] = topTextUI[i];
+                    }
+                }*/
+
+
                 // Song Selection
-                /*if (SelectedYSize > Songs.Count)
+                if (SelectedYSize > Songs.Count)
                 {
                     SelectedYSize -= (SelectedYSize - Songs.Count);
-                }*/
+                }
                 for (int i = 0; i < SelectedYSize; i++)
                 {
                     string SongBuffer = "";
@@ -156,7 +173,7 @@ namespace TerminalMusic
                     }
                     for (int b = 0; b < SongBuffer.Length; b++)
                     {
-                        Buffer[b + 1, i + 5] = SongBuffer[b];
+                        Buffer[b + 1, i + TopUISize] = SongBuffer[b];
                     }
                 }
 
@@ -175,7 +192,7 @@ namespace TerminalMusic
             {
                 Console.Title = "Window is to Small to Draw";
             }
-            Debug.WriteLine("Time: " + Stopwatch.ElapsedMilliseconds);
+
         }
 
         public static void KeyDown(ConsoleKey key)
@@ -183,19 +200,27 @@ namespace TerminalMusic
             // Switch Audio Playing
             if (key == ConsoleKey.Spacebar)
             {
-                if (Playing == true)
+                if (NoMusic)
                 {
-                    Playing = false;
+                    NoMusic = true;
+                    Playing = true;
                 }
                 else
                 {
-                    Playing = true;
+                    if (Playing == true)
+                    {
+                        Playing = false;
+                    }
+                    else
+                    {
+                        Playing = true;
+                    }
                 }
             }
             // Scroll Down
             else if (key == ConsoleKey.DownArrow)
             {
-                if (Selected < Songs.Count)
+                if (Selected < Songs.Count - 1)
                     if (Selected == SelectedYSize - 1)
                     {
                         Offset += 1;
@@ -221,6 +246,10 @@ namespace TerminalMusic
             // Select Song
             else if (key == ConsoleKey.Enter)
             {
+                if (NoMusic)
+                {
+                    NoMusic = false;
+                }
                 SongSelection = Selected;
                 Playing = true;
                 Flag = 1;
@@ -232,6 +261,7 @@ namespace TerminalMusic
                 {
                     Volume += 0.05f;
                 }
+                Flag = 1;
             }
             // Volume Minus
             else if (key == ConsoleKey.M)
@@ -240,6 +270,12 @@ namespace TerminalMusic
                 {
                     Volume -= 0.05f;
                 }
+                Flag = 1;
+            }
+            else if (key == ConsoleKey.F5)
+            {
+                Load();
+                Flag = 1;
             }
         }
 
@@ -248,12 +284,13 @@ namespace TerminalMusic
             int oldID = -1;
             while (ExeRunning)
             {
+                while (NoMusic) { }
                 using (var audioFile = new AudioFileReader(Songs[SongSelection].Path))
                 using (var outputDevice = new WaveOutEvent())
                 {
                     outputDevice.Init(audioFile);
                     PlayingLen = audioFile.TotalTime;
-                    PartLen = PlayingLen / 10;
+                    PlayingPos = new TimeSpan(0);
                     while (SongSelection == oldID)
                     {
                         if (Playing == true)
@@ -264,12 +301,9 @@ namespace TerminalMusic
                         {
                             outputDevice.Stop();
                         }
+                        PlayingPos = new TimeSpan(outputDevice.GetPosition());
+
                         outputDevice.Volume = Volume;
-                        if (RenderPart < PlayingLen / PartLen)
-                        {
-                            RenderPart = Convert.ToUInt32(PlayingLen / PartLen);
-                            //Flag = 1;
-                        }
                     }
                     oldID = SongSelection;
                     audioFile.Dispose();
